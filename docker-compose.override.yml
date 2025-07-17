@@ -1,0 +1,29 @@
+services:
+  node:
+    volumes:
+      - ./node/src:/app/src      # แมปโค้ดจากเครื่องเข้า container
+      - /app/node_modules       # ไม่แมป node_modules ให้ container ใช้ของตัวเอง
+    command: npm run dev         # รัน dev server เช่น nodemon
+    environment:
+      - NODE_ENV=development
+
+  # test:
+  #   volumes:
+  #     - ./node/test:/app/test      # แมปโค้ดจากเครื่องเข้า container
+  #     - /app/node_modules       # ไม่แมป node_modules ให้ container ใช้ของตัวเอง
+  #   command: npm test         # รัน dev server เช่น nodemon
+  #   environment:
+  #     - NODE_ENV=development
+
+  # worker:    
+  #   volumes:
+  #     - ./worker/src:/app/src
+  #     - /app/node_modules
+  #   command: npm run dev
+  #   environment:
+  #     - NODE_ENV=development
+
+      
+
+networks:
+  backend:

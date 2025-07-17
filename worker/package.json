@@ -1,0 +1,33 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/worker.js",
+  "scripts": {
+    "start": "node src/worker.js",
+    "dev": "nodemon src/worker.js"
+  },
+  "author": "nickyshox99",
+  "license": "ISC",
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "amqplib": "^0.10.8",
+    "axios": "^1.10.0",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "fs": "^0.0.1-security",
+    "install": "^0.13.0",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "mysql2": "^3.14.2",
+    "npm": "^11.4.2",
+    "redis": "^4.6.7",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "nodemon": "^3.1.10"
+  }
+}

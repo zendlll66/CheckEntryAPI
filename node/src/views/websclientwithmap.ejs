@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WebSocket Map Client</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body { font-family: sans-serif; padding: 10px; background: #f4f4f4; }
+    #map { height: 400px; margin-bottom: 10px; }
+    #chat-box { height: 200px; overflow-y: auto; background: white; padding: 10px; border: 1px solid #ccc; }
+    input, button { padding: 6px; font-size: 1em; }
+  </style>
+</head>
+<body>
+
+  <h2>📍 WebSocket Map + Chat Client</h2>
+
+  <label>WebSocket URL:</label>
+  <input type="text" id="urlInput" value="ws://bstsoft.duckdns.org:19000" size="50">
+  <br><br>
+
+  <label>Token:</label>
+  <input type="text" id="tokenInput" placeholder="Paste JWT token here" size="50">
+  <br><br>
+
+  <button onclick="connect()">🔌 Connect</button>
+  <span id="status" style="margin-left:10px; color:green;"></span>
+
+  <div id="map" style="min-height: 600px;"></div>
+  <div id="chat-box"></div>
+
+  <input type="text" id="messageInput" placeholder="Type a message..." size="50">
+  <button onclick="clearMessage()">🧹 Clear</button>
+  <button onclick="sendMessage()">📤 Send</button>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://unpkg.com/leaflet"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+  <script>
+    let socket;
+    const markers = {};
+    let map = L.map('map').setView([13.7563, 100.5018], 13); // Bangkok
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    L.marker([13.7563, 100.5018]).addTo(map).bindPopup(`Me`);
+
+    function connect() {
+      const url = document.getElementById('urlInput').value;
+      const token = document.getElementById('tokenInput').value;
+
+      if (!url || !token) {
+        alert('Please enter both URL and Token');
+        return;
+      }
+
+      socket = io(url, {
+        auth: { token },
+        transports: ['websocket']
+      });
+
+      socket.on('connect', () => {
+        log(`✅ Connected to ${url}`);
+        document.getElementById('status').innerText = 'Connected';
+      });
+
+      socket.on('message', (data) => {                
+        const { email, message, lat, lng } = JSON.parse(data);
+        const hashedId = md5(email);
+        //log(`📍 ${email}: ${message} @ [${lat.toFixed(5)}, ${lng.toFixed(5)}]`);
+        log(`📍 ${email}: ${message} @ [${lat}, ${lng}]`);
+                
+        // ถ้ามี marker อยู่แล้ว → ย้าย
+        if (markers[hashedId]) {
+          markers[hashedId].setLatLng([lat, lng]);          
+        } else {
+          // ยังไม่มี marker → สร้างใหม่
+          const marker = L.marker([lat, lng]).addTo(map).bindPopup(`${email}`);
+          markers[hashedId] = marker;
+        }
+      });
+
+      socket.on('chat-message', (data) => {        
+        const { email, message, lat, lng } = data;
+        const hashedId = md5(email);
+        //log(`📍 ${email}: ${message} @ [${lat.toFixed(5)}, ${lng.toFixed(5)}]`);
+        log(`📍 ${email}: ${message} @ [${lat}, ${lng}]`);
+
+        console.log(hashedId);
+        
+        // ถ้ามี marker อยู่แล้ว → ย้าย
+        if (markers[hashedId]) {
+          markers[hashedId].setLatLng([lat, lng]);          
+        } else {
+          // ยังไม่มี marker → สร้างใหม่
+          const marker = L.marker([lat, lng]).addTo(map).bindPopup(`${email}`);
+          markers[hashedId] = marker;
+        }
+
+      });
+
+      socket.on('connect_error', (err) => {
+        log(`❌ Connection Error: ${err.message}`);
+        document.getElementById('status').innerText = 'Connection Error';
+      });
+
+      socket.on('disconnect', (reason) => {
+        log(`🔌 Disconnected: ${reason}`);
+        document.getElementById('status').innerText = 'Disconnected';
+      });
+    }
+
+    async function hashEmail(email) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(email);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function sendMessage() {
+      const msg = document.getElementById('messageInput').value;
+      if (!msg || !socket?.connected) return;
+
+      const fakeLat = 13.75 + Math.random() * 0.01;
+      const fakeLng = 100.50 + Math.random() * 0.01;
+      const email = 'you@example.com'; // หรือ extract จาก JWT
+
+      const payload = {
+        message: msg,
+        email: email,
+        lat: fakeLat,
+        lng: fakeLng
+      };
+
+      socket.emit('chat-message', payload);
+      log(`🧑‍💻 You: ${msg}`);
+      document.getElementById('messageInput').value = '';
+    }
+
+     function clearMessage()
+    {
+      const box = document.getElementById('chat-box');
+      box.innerHTML = '';
+    }
+
+    function log(msg) {
+      const chat = document.getElementById('chat-box');
+      const div = document.createElement('div');
+      div.textContent = msg;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  </script>
+</body>
+</html>
