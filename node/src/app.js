@@ -7,6 +7,7 @@ const express = require('express');
 const utils = require('./utils/ipaddress');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const notifyRoutes = require('./routes/notify');
 
 const app = express();
 
@@ -17,6 +18,8 @@ app.set('views', path.join(__dirname, './views'));
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notify', notifyRoutes);
+
 
 app.get('/', async (req, res) => {    
   const ip = utils.getClientIp(req);

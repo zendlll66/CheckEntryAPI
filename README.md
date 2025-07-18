@@ -107,3 +107,10 @@ npx knex migrate:latest
 # คำสั่งดู Cache ใน Redis
 ```bash 
 docker exec -it redis redis-cli
+
+
+https://developers.google.com/oauthplayground/
+Firebase Cloud Messaging API v1
+https://www.googleapis.com/auth/firebase.messaging
+กดขอ Authorize APIS
+
