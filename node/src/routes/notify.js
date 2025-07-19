@@ -13,12 +13,14 @@ const { v4: uuidv4 } = require('uuid');
 const { password_hash, password_verify } = require('../utils/password');
 const { default: axios } = require('axios');
 
+const userModel = require('../models/user.model');
+const notifyModel = require('../models/notifysetting.model');
+
 // POST /api/setauthorizecode
 router.post('/setauthorizecode', async (req, res) =>  {
    try {
 
       const { authorizecode } = req.body;
-
       const authcode = await knex('push_notification_setting').update(
         {
           authorize_code: authorizecode
@@ -28,7 +30,33 @@ router.post('/setauthorizecode', async (req, res) =>  {
         {id:1}
       );
 
-      return res.status(200).json({ message : 'success'});
+      let data ={
+            "token_uri":"https://oauth2.googleapis.com/token",
+            "code":authorizecode
+          }
+
+      let response = await axios.post("https://developers.google.com/oauthplayground/exchangeAuthCode"
+      , data
+      );
+
+      if (response.data.error) {
+        return res.status(401).json({ error: response.data.error });
+      }
+
+      const updateToken =await notifyModel.uppateTokenById(1,
+        {
+          access_token: response.data.access_token,
+          refresh_token: response.data.refresh_token,
+          refresh_unsuccess_count: 0,
+        }
+      );
+      if (updateToken) {
+        return res.status(200).json({ message : 'success'});
+      }
+      else
+      {
+        return res.status(200).json({ error : 'unsuccess'});
+      }
       
     } catch (err) {
       console.log(err);
@@ -40,18 +68,11 @@ router.get('/exchangeauthorizecode', async (req, res) =>  {
     
    try {
 
-      const authcode = await knex('push_notification_setting').select('*')
-      .where
-      (
-        {id:1}
-      );
-
-      let item = {};
-      if (authcode.length>0) {
-          item = authcode[0];
+      const authcode = await notifyModel.getAuthCode();
+      if (authcode.length>0) {          
           let data ={
             "token_uri":"https://oauth2.googleapis.com/token",
-            "code":item.authorize_code
+            "code":authcode
           }
 
           try {
@@ -63,13 +84,21 @@ router.get('/exchangeauthorizecode', async (req, res) =>  {
               return res.status(401).json({ error: response.data.error });
             }
 
-            const updateToken =await knex('push_notification_setting').update(
+            const updateToken =await notifyModel.uppateTokenById(1,
               {
                 access_token: response.data.access_token,
                 refresh_token: response.data.refresh_token,
+                refresh_unsuccess_count: 0,
               }
-            ).where({id:1});
-            return res.status(200).json({ message : 'success'});
+            );
+            if (updateToken) {
+              return res.status(200).json({ message : 'success'});
+            }
+            else
+            {
+              return res.status(200).json({ error : 'unsuccess'});
+            }
+            
           } catch (err) {
             console.log(err);
             return res.status(401).json({ error: err.message });
@@ -96,18 +125,14 @@ router.post('/sendnotify', async (req, res) =>  {
           return res.status(401).json({ error: 'Invalid parameter.' });
       }
 
-      const users = await knex('users')
-        .select('*')
-        .where(function() {
-          if (email) this.orWhere({ email:email });
-          if (phone) this.orWhere({ phone:phone });
-        });
+      const users = userModel.findUserByEmailOrPhone(email,phone);
 
       if (users.length==0) {
           return res.status(401).json({ error: 'not found user.' });
       }
 
-      const notifySetting = await knex('push_notification_setting').select('*').where({id:1});
+      const notifySetting = notifyModel.getSetting();
+      
       if (notifySetting.length==0) {
           return res.status(401).json({ error: 'not found notify setting.' });
       }
@@ -171,14 +196,21 @@ router.post('/sendnotify', async (req, res) =>  {
           }
           else
           {
-              console.log(response.data);
-              const updateToken =await knex('push_notification_setting').update(
-              {
-                access_token: response.data.access_token,
-                refresh_token: response.data.refresh_token,
+              const updateToken = await notifyModel.uppateTokenById(1,
+                {
+                  access_token: response.data.access_token,
+                  refresh_token: response.data.refresh_token,
+                  refresh_unsuccess_count: 0,
+                }
+              );
+              if (updateToken) {
+                return res.status(200).json({ message : 'refresh token success , please send notify again'});  
               }
-              ).where({id:1});
-              return res.status(200).json({ message : 'refresh token success , please send notify again'});
+              else
+              {
+                return res.status(200).json({ message : 'refresh token unsuccess'});  
+              }
+              
           }
       }
       

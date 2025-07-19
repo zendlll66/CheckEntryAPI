@@ -9,16 +9,24 @@ const { redisClient } = require('./../utils/redis');
 const { sendOtp } = require('./../utils/smsservice');
 const knex = require('../db/connection'); // เชื่อมกับ DB
 const { v4: uuidv4 } = require('uuid');
+const userModel = require('../models/user.model');
 
 const { password_hash, password_verify } = require('../utils/password');
 
 // POST /api/login
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
   const { email,telno,password } = req.body;
 
+  const users = userModel.findUserByEmailOrPhone(email,telno);
+
+    if (users.length==0) {
+        return res.status(401).json({ error: 'not found user.' });
+    }
+
   // สมมติว่าผ่านการตรวจสอบแล้ว
-  const token = jwt.sign({ email }, SECRET_KEY, { expiresIn: JWT_EXPIRES_IN });
+  const token = jwt.sign({ phone }, SECRET_KEY, { expiresIn: JWT_EXPIRES_IN });
   res.json({ token });
+
 });
 
 router.post('/checkauthtoken', (req, res) => {
