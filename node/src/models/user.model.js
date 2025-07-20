@@ -82,7 +82,7 @@ const User = {
   },
 
   async updateToken(phone, token) {
-    return knex('users').where({ phone }).update({ firebase_token: token });
+    return knex('users').where({ phone }).update({ firebase_token: token }).returning('*');
   }
 
 };

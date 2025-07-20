@@ -41,17 +41,14 @@ exports.login = async (req, res) => {
             });
         }
 
-        await userModel.updateToken(phone, firebase_token);
-
-        res.json({
-            user: {
-                id: user.id,
-                email: user.email,
-                phone: user.phone,
-                firebase_token: user.firebase_token
-            }
-        })
-
+        const user2  = await userModel.updateToken(phone, firebase_token);
+        
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            user: user2
+        });
+    
     } catch (err) {
         console.error(err); // log ไปก่อน
         res.status(500).json({
